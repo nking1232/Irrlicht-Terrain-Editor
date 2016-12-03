@@ -1,9 +1,9 @@
-/* Some Code(Most) from Luiz snippet here: 
+/* Some Code(Most) from Luiz snippet here:
 http://irrlicht.sourceforge.net/forum/viewtopic.php?t=44757
 was used which also happens to be based on Katsankat's post here:
 http://irrlicht.sourceforge.net/forum/viewtopic.php?f=9&t=32251
-I take no credit for the terrain editing code I am simply trying to turn 
-it into a free easy to use editor A big thanks goes to every from who'm I 
+I take no credit for the terrain editing code I am simply trying to turn
+it into a free easy to use editor A big thanks goes to every from who'm I
 borrowed code and the irrlicht tutorials for the gui stuff*/
 #include <irrlicht.h>
 #include <cmath>
@@ -329,21 +329,22 @@ void RaiseTerrainVertex(s32 index, f32 step, bool up)
   Save file
 ==============================================================================*/
 void save (IVideoDriver* driver){
+    //We get the dimensions of the height map
     s32 heightmapWidth = heightmap->getDimension().Width;
     s32 heightmapHeight = heightmap->getDimension().Height;
-
+    //Then we generate a image from those dimensions
     const dimension2d<u32> dim (heightmapWidth, heightmapHeight);
     IImage *img = driver->createImage(ECF_A8R8G8B8, dim);
-
+    //Next we get all of the Vertices from the terrain
     S3DVertex2TCoords* verts = (S3DVertex2TCoords*)terrain->getMesh()->getMeshBuffer(0)->getVertices();
-
+    //Then translate them into a 2d image.
     for (u32 y= 0, i = 0; y < heightmapHeight; y++){
         for(u32 x = 0; x < heightmapWidth; i++, x++){
             u8 py = (u8)verts[i].Pos.Y;
             img->setPixel((heightmapHeight-1)-y, x, SColor(0, py, py, py));
         }
     }
-
+    //Next we save our image and clear it from memory.
     driver->writeImageToFile(img, openTerrain, 0);
     img->drop();
 }
