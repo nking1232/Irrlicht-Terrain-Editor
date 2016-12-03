@@ -53,6 +53,7 @@ enum
 };
 void save(IVideoDriver*);
 
+//Generates white noise for the random brush(very slow).
 void genWhiteNoise(int bsize)
 {
     IImage *tempBrush;
@@ -77,6 +78,7 @@ void genWhiteNoise(int bsize)
     brush = tempBrush;
     //driver->writeImageToFile(tempBrush, "test.png", 0);
 }
+//Generates brushes for use with the editor
 void generateBrush(int radius)
 {
     IImage* tempBrush;
@@ -103,6 +105,7 @@ void generateBrush(int radius)
     brush = tempBrush;
     //driver->writeImageToFile(tempBrush, "test.png", 0);
 }
+//Loads a terrain although the save function just outputs to basemap.bmp
 void load(const c8* fn, IGUIFileOpenDialog* dialog)
 {
     path filename(fn);
@@ -143,6 +146,7 @@ void load(const c8* fn, IGUIFileOpenDialog* dialog)
     }
 
 }
+//Handler for menu items
 void OnMenuItemSelected(IGUIContextMenu* menu)
 {
     s32 id = menu->getItemCommandId(menu->getSelectedItem());
@@ -343,7 +347,7 @@ void save (IVideoDriver* driver){
     driver->writeImageToFile(img, openTerrain, 0);
     img->drop();
 }
-
+//Builds our gui so things look pretty ^p^
 void buildGUI()
 {
     //We set up our Menu here.
@@ -385,6 +389,7 @@ void buildGUI()
     brushStrength->setPos(1);
 }
 MyEventReceiver receiver;
+//Creates our device and gathers the video driver and stuff from it
 void setUpDevice()
 {
     device = createDevice(EDT_DIRECT3D9, dimension2d<u32>(800, 600), 32, false, true, false, &receiver);
@@ -470,7 +475,7 @@ int main()
                     device->getCursorControl()->setVisible( !device->getCursorControl()->isVisible() );
                 }
                 // move the arrow to the nearest vertex ...
-                //400, 300 si la résolution utilisée est 800x600
+                //400, 300 si la rÃ©solution utilisÃ©e est 800x600
                 const position2di clickPosition = position2di(400, 300);
                 const line3d<float> ray = smgr->getSceneCollisionManager()->getRayFromScreenCoordinates(clickPosition, cam);
                 vector3df pos;
