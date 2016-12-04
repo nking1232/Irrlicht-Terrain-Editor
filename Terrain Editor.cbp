@@ -30,6 +30,8 @@
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
+			<Add option="-static" />
+			<Add option="-static-libgcc" />
 			<Add directory="irrlicht-1.8.3/include" />
 		</Compiler>
 		<Linker>
