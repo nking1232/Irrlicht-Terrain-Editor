@@ -101,7 +101,8 @@ void generateBrush(int radius)
         if(color.getBlue() > 0)
         color.setBlue(color.getBlue() - loss);
     }
-    brush->drop();
+    if(brush)
+        brush->drop();
     brush = tempBrush;
     //driver->writeImageToFile(tempBrush, "test.png", 0);
 }
@@ -420,9 +421,6 @@ int main()
         rect<s32>(10,421,250,475), true, true, 0, -1, true);
     heightmap = driver->createImageFromFile(openTerrain);
     if(!heightmap)
-        return 1;
-    brush = driver->createImageFromFile("brush.png");
-    if(!brush)
         return 1;
 
     terrain = smgr->addTerrainSceneNode(openTerrain, 0, -1, core::vector3df(0, 0, 0));

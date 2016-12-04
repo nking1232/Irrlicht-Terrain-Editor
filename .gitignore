@@ -27,6 +27,11 @@
 *.out
 *.app
 
+#Code Blocks Files
+*.layout
+*.depend
+obj/*.*
+
 # =========================
 # Operating System Files
 # =========================
