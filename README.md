@@ -2,13 +2,12 @@
 A terrain editor in irrlicht with a gui
 
 #COMPILING
-To compile you'll need to first download a copy of irrlicht 1.8.3 and extract the folder
-contained in the archive to the same folder as the project. Then you'll need to copy the
-irrlicht.dll file to the project folder as well to ensure that the project runs. Next you'll
-need to open the project file in codeblocks and compile. This project should tecnically
-compile under any operating system that irrlicht supports but i've only included a codeblocks
-project for windows.
-
+Step 1: Download & Install http://sourceforge.net/projects/codeblocks/files/Binaries/16.01/Windows/codeblocks-16.01mingw-setup.exe 
+if you do not already have codeblocks.
+Step 2: Open Terrain Editor.cbp in code blocks.
+Step 3: Go to the Build drop down menu and select Build.
+Step 4: If the compiler finishes without error go to the Debug drop down menu and select Start/Continue
+Step 5: TODO
 #How To Use
 Once you've compiled you can just press f8 to run the program while in code blocks.
 
