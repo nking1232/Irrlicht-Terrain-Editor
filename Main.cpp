@@ -19,7 +19,7 @@ using namespace gui;
 
 IImage* heightmap = 0;
 IImage* brush = 0;
-ITerrainSceneNode* terrain;
+ITerrainSceneNode* terrain = 0;
 IrrlichtDevice* device = 0;
 IVideoDriver* driver = 0;
 ISceneManager* smgr = 0;
@@ -398,21 +398,36 @@ void setUpDevice()
     smgr = device->getSceneManager();
     env = device->getGUIEnvironment();
 }
+
 int main()
 {
     device = createDevice(EDT_DIRECT3D9, dimension2d<u32>(800, 600), 32, false, true, false, &receiver);
-
+    if(!device)
+        return 1;
     driver = device->getVideoDriver();
+    if(!driver)
+        return 1;
     smgr = device->getSceneManager();
+    if(!smgr)
+        return 1;
     env = device->getGUIEnvironment();
+    if(!smgr)
+        return 1;
     device->getCursorControl()->setVisible(false);
+
     env->addStaticText(
         L"Press F1 to save\nPress W for wireframe\n Click anywhere to raise the terrain",
         rect<s32>(10,421,250,475), true, true, 0, -1, true);
     heightmap = driver->createImageFromFile(openTerrain);
+    if(!heightmap)
+        return 1;
     brush = driver->createImageFromFile("brush.png");
+    if(!brush)
+        return 1;
 
     terrain = smgr->addTerrainSceneNode(openTerrain, 0, -1, core::vector3df(0, 0, 0));
+    if(!terrain)
+        return 1;
     terrain->setScale(core::vector3df(32, 5, 32));
     terrain->setMaterialFlag(video::EMF_LIGHTING, false);
 
@@ -435,7 +450,6 @@ int main()
     ITimer* irrTimer = device->getTimer();
     u32 then = 0, then30 = 0;
     char c[24];
-    //genWhiteNoise(32);
     bool wireframe = false;
     int lastFPS = -1;
     while(device->run()){
