@@ -443,6 +443,7 @@ int main()
             u32 now = irrTimer->getTime();
 
             if (then30 < now){
+                //We need to break the while loop if we press escape which will in turn close the program
                 if(receiver.IsKeyDown(KEY_ESCAPE)) break;
 
                 if (receiver.IsKeyDown(KEY_KEY_W) && then < now){
@@ -452,7 +453,7 @@ int main()
 
                     then = now + 300;
                 }
-
+                //We adjust the brush speed if F4 or F5 is pressed down(Not used)
                 if (receiver.IsKeyDown(KEY_F4) && then < now){
                     device->getLogger()->log("KEY_F4", ELL_INFORMATION);
                     step += 1.f;
@@ -464,7 +465,7 @@ int main()
 
                     then = now + 100;
                 }
-
+                //We check if the save button(F1) is pressed down
                 if(receiver.IsKeyDown(KEY_F1))
                 {
                     device->getLogger()->log("KEY_F1", ELL_INFORMATION);
@@ -472,7 +473,9 @@ int main()
                 }
                 if(receiver.IsKeyDown(KEY_KEY_T))
                 {
+                    //Disable the input receiver for our fps camera scene node which releases the mouse.
                     cam->setInputReceiverEnabled( !cam->isInputReceiverEnabled() );
+                    //We set our cursor to visible again.
                     device->getCursorControl()->setVisible( !device->getCursorControl()->isVisible() );
                 }
                 // move the arrow to the nearest vertex ...
@@ -514,7 +517,7 @@ int main()
 
                     arrow->setPosition(vector3df(x, terrain->getHeight(x, z) + 100, z));
                 }
-
+                //Here we do all of the rendering
                 driver->beginScene(true, true, 0);
                 smgr->drawAll();
                 env->drawAll();
@@ -532,7 +535,7 @@ int main()
             }
         }
     }
-
+    //We do general cleanup stuff before we close the program.
     heightmap->drop();
     brush->drop();
 
