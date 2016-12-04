@@ -17,8 +17,8 @@ using namespace io;
 using namespace quake3;
 using namespace gui;
 
-IImage* heightmap;
-IImage* brush;
+IImage* heightmap = 0;
+IImage* brush = 0;
 ITerrainSceneNode* terrain;
 IrrlichtDevice* device = 0;
 IVideoDriver* driver = 0;
@@ -56,7 +56,7 @@ void save(IVideoDriver*);
 //Generates white noise for the random brush(very slow).
 void genWhiteNoise(int bsize)
 {
-    IImage *tempBrush;
+    IImage *tempBrush = 0;
     tempBrush = driver->createImage(ECF_A8R8G8B8, dimension2d<u32>(bsize, bsize));
     tempBrush->fill(SColor(255,0,0,0));
     SColor color(255,255,255,255);
@@ -81,7 +81,7 @@ void genWhiteNoise(int bsize)
 //Generates brushes for use with the editor
 void generateBrush(int radius)
 {
-    IImage* tempBrush;
+    IImage* tempBrush = 0;
     tempBrush = driver->createImage(ECF_A8R8G8B8, dimension2d<u32>(radius*2,radius*2));
     tempBrush->fill(SColor(255,0,0,0));
     position2di center((radius*2)/2,(radius*2)/2);
