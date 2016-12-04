@@ -75,6 +75,8 @@ void genWhiteNoise(int bsize)
 
     }
     }
+    if(brush)
+        brush->drop();
     brush = tempBrush;
     //driver->writeImageToFile(tempBrush, "test.png", 0);
 }
