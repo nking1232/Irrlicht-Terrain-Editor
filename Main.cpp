@@ -73,7 +73,7 @@ void genWhiteNoise(int bsize)
             tempBrush->setPixel(w, h, color, false);
 
 
-    }
+        }
     }
     if(brush)
         brush->drop();
