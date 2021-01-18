@@ -5,10 +5,13 @@ http://irrlicht.sourceforge.net/forum/viewtopic.php?f=9&t=32251
 I take no credit for the terrain editing code I am simply trying to turn
 it into a free easy to use editor A big thanks goes to every from who'm I
 borrowed code and the irrlicht tutorials for the gui stuff*/
+
 #include <irrlicht.h>
 #include <cmath>
 #include <ctime>
 #include "driverChoice.h"
+#include "Terrain.h"
+#include "brushdef.h"
 using namespace irr;
 using namespace core;
 using namespace video;
@@ -29,10 +32,9 @@ int brushSize = 16;
 path openTerrain("basemap.bmp");
 f32 step = 2;
 int strength = 1;
-enum brush_t{
-    BRUSH_RADIAL_GRAD = 0,
-    BRUSH_WHITE_NOISE = 1
-};
+IGUICheckBox *paintCheck;
+s32 red=100, green=100, blue=100;
+
 brush_t active_brush = BRUSH_RADIAL_GRAD;
 enum
 {
@@ -49,7 +51,12 @@ enum
     GUI_ID_BRUSHSTRENGTH = 110,
     GUI_ID_NEWTERRAIN = 111,
     GUI_ID_BRUSH_RADIAL = 112,
-    GUI_ID_BRUSH_NOISE = 113
+    GUI_ID_BRUSH_NOISE = 113,
+    GUI_ID_COLOR = 114,
+    GUI_ID_PAINT = 115,
+    GUI_ID_PAINT_RED = 116,
+    GUI_ID_PAINT_GREEN = 117,
+    GUI_ID_PAINT_BLUE = 118,
 };
 void save(IVideoDriver*);
 
@@ -240,6 +247,12 @@ class MyEventReceiver : public IEventReceiver
                     }else if(id == GUI_ID_BRUSHSTRENGTH){
                         const s32 pos = ((IGUIScrollBar*)event.GUIEvent.Caller)->getPos();
                         step = pos;
+                    }else if(id == GUI_ID_PAINT_RED){
+                        red = 2 * ((IGUIScrollBar*)event.GUIEvent.Caller)->getPos();
+                    }else if(id == GUI_ID_PAINT_GREEN){
+                        green = 2 * ((IGUIScrollBar*)event.GUIEvent.Caller)->getPos();
+                    }else if(id == GUI_ID_PAINT_BLUE){
+                        blue = 2 * ((IGUIScrollBar*)event.GUIEvent.Caller)->getPos();
                     }
                     break;
                 case EGET_BUTTON_CLICKED:
@@ -383,6 +396,10 @@ void buildGUI()
     env->addStaticText(L"Brush Size:", rect<s32>(10,50,80,90), false, false, wnd);
     IGUIScrollBar* brushStrength = env->addScrollBar(true, rect<s32>(10,90,190,110),wnd, GUI_ID_BRUSHSTRENGTH);
     env->addStaticText(L"Brush Strength:", rect<s32>(10,80,80,120), false, false, wnd);
+    paintCheck = env->addCheckBox(false, rect<s32>(10, 160, 80, 180), wnd, GUI_ID_PAINT,L"Paint Terrain");
+    IGUIScrollBar* brushRed = env->addScrollBar(true, rect<s32>(10,180,190,200),wnd, GUI_ID_PAINT_RED);
+    IGUIScrollBar* brushGreen = env->addScrollBar(true, rect<s32>(10,200,190,220),wnd, GUI_ID_PAINT_GREEN);
+    IGUIScrollBar* brushBlue = env->addScrollBar(true, rect<s32>(10,220,190,240),wnd, GUI_ID_PAINT_BLUE);
     scrollbar->setMax(200);
     scrollbar->setPos(100);
     brushSize->setMax(128);
@@ -404,7 +421,7 @@ void setUpDevice()
 
 int main()
 {
-    device = createDevice(EDT_DIRECT3D9, dimension2d<u32>(800, 600), 32, false, true, false, &receiver);
+    device = createDevice(EDT_OPENGL, dimension2d<u32>(800, 600), 32, false, true, false, &receiver);
     if(!device)
         return 1;
     driver = device->getVideoDriver();
@@ -432,7 +449,9 @@ int main()
     terrain->setMaterialFlag(video::EMF_LIGHTING, false);
 
     terrain->setPosition(terrain->getPosition());
-    terrain->setMaterialTexture(0, driver->getTexture("rockwall.jpg"));
+    IImage *Iter = driver->createImageFromFile("rockwall.jpg");
+    ITexture *ter = driver->addTexture("terrain",Iter);
+    terrain->setMaterialTexture(0, ter);
     selector = smgr->createTerrainTriangleSelector(terrain, 0);
 
     // Arrow
@@ -519,10 +538,48 @@ int main()
                             {
                                 if(receiver.IsLMBDown())
                                     device->getLogger()->log("Left mouse button down", ELL_INFORMATION);
-                                    if(receiver.IsRMBDown())
-                                    device->getLogger()->log("Right mouse button down", ELL_INFORMATION);
-                                RaiseTerrainVertex(index, step, receiver.IsLMBDown());
-                                then = now + 100;
+                                    if(receiver.IsRMBDown()){
+                                        device->getLogger()->log("Right mouse button down", ELL_INFORMATION);
+                                    }
+                                if(paintCheck->isChecked())
+                                {
+                                    stringw xc = "X:";
+                                    xc += 512 - x;
+                                    device->getLogger()->log(xc.c_str(), ELL_INFORMATION);
+                                    stringw Zc = "Z:";
+                                    Zc += z;
+                                    device->getLogger()->log(Zc.c_str(), ELL_INFORMATION);
+                                    //TODO: Paint.
+                                    const double PI = 3.14159;
+                                    double loss = 255 / brushSize;
+                                    SColor color(255,red,green,blue);
+                                    for(double r = 0; r <= brushSize/20; r++)
+                                    {
+                                        for(double angle=0; angle <= 2*PI; angle +=0.001)
+                                        {
+                                            //tempBrush->setPixel(center.X + r*cos(angle), center.Y + r*sin(angle), color, false);
+                                            Iter->setPixel(512 - x + r*cos(angle), z + r*sin(angle), SColor(255,red,green,blue));
+                                        }
+                                        if(color.getRed() > 0)
+                                        color.setRed(color.getRed() - loss);
+                                        if(color.getGreen() > 0)
+                                        color.setGreen(color.getGreen() - loss);
+                                        if(color.getBlue() > 0)
+                                        color.setBlue(color.getBlue() - loss);
+                                        color.setAlpha(color.getAlpha() - loss);
+                                    }
+                                    Iter->setPixel(512 - x, z, SColor(255,red,green,blue));
+                                    ITexture *old = ter;
+                                    // old->drop(); will cause the program to throw an exception.
+                                    driver->removeTexture(old);
+                                    ter = driver->addTexture("terrain", Iter);
+                                    terrain->setMaterialTexture(0, ter);
+
+                                }else{
+                                    RaiseTerrainVertex(index, step, receiver.IsLMBDown());
+                                    then = now + 100;
+                                }
+
                             }
                     }
 
