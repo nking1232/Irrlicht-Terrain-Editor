@@ -427,8 +427,6 @@ int main()
 
     terrain->setPosition(terrain->getPosition());
     IImage *Iter = driver->createImageFromFile("rockwall.jpg");
-    Check_pat = driver->createImageFromFile("natfl190.jpg");
-    generateBrush(32);
     TOOLBAR_1 = new Brush();
     TOOLBAR_1->setBrush(driver->createImageFromFile("rock006.jpg"));
     TOOLBAR_1->setType(BRUSH_TEXTURE);
@@ -454,7 +452,7 @@ int main()
     generateBrush(32);
     buildGUI();
     ITimer* irrTimer = device->getTimer();
-    u32 then = 0, then30 = 0;
+    u32 then = 0, then30 = 0, t=0;
     char c[24];
     bool wireframe = false;
     int lastFPS = -1;
@@ -491,13 +489,15 @@ int main()
                     device->getLogger()->log("KEY_F1", ELL_INFORMATION);
                     save (driver);
                 }
-                if(receiver.IsKeyDown(KEY_KEY_T))
-                {
-                    //Disable the input receiver for our fps camera scene node which releases the mouse.
-                    cam->setInputReceiverEnabled( !cam->isInputReceiverEnabled() );
-                    //We set our cursor to visible again.
-                    device->getCursorControl()->setVisible( !device->getCursorControl()->isVisible() );
-                }
+                    if(receiver.IsKeyDown(KEY_KEY_T) && now - t > 200)
+                    {
+                        //Disable the input receiver for our fps camera scene node which releases the mouse.
+                        cam->setInputReceiverEnabled( !cam->isInputReceiverEnabled() );
+                        //We set our cursor to visible again.
+                        device->getCursorControl()->setVisible( !device->getCursorControl()->isVisible() );
+                        t = now;
+                    }
+
                 if(receiver.IsKeyDown(KEY_KEY_1)){
                     toolbarState = 1;
                 }else if(receiver.IsKeyDown(KEY_KEY_2)){
@@ -687,41 +687,6 @@ int main()
                                 default:
                                     break;
                                 }
-                               /* if(paintCheck->isChecked())
-                                {
-                                    stringw xc = "X:";
-                                    xc += 512 - x;
-                                    device->getLogger()->log(xc.c_str(), ELL_INFORMATION);
-                                    stringw Zc = "Z:";
-                                    Zc += z;
-                                    device->getLogger()->log(Zc.c_str(), ELL_INFORMATION);
-                                    //TODO: Paint.
-                                    const double PI = 3.14159;
-                                    double loss = 255 / brushSize;
-                                    SColor color(255,red,green,blue);
-                                    for(double r = 0; r <= brushSize/20; r++)
-                                    {
-                                        for(double angle=0; angle <= 2*PI; angle +=0.001)
-                                        {
-                                            s32 bx = 512 - x + r*cos(angle);
-                                            s32 bz = z + r*sin(angle);
-                                            //color = Check_pat->getPixel(remainder(bx+60, 128),remainder(bz, 128));
-                                            //tempBrush->setPixel(center.X + r*cos(angle), center.Y + r*sin(angle), color, false);
-                                            Iter->setPixel(512 - x + r*cos(angle), z + r*sin(angle), color);
-                                        }
-
-                                    }
-                                    //Iter->setPixel(512 - x, z, SColor(255,red,green,blue));
-                                    ITexture *old = ter;
-                                    // old->drop(); will cause the program to throw an exception.
-                                    driver->removeTexture(old);
-                                    ter = driver->addTexture("terrain", Iter);
-                                    terrain->setMaterialTexture(0, ter);
-
-                                }else{
-                                    RaiseTerrainVertex(index, step, receiver.IsLMBDown());
-                                    then = now + 100;
-                                }*/
 
                             }
                     }
@@ -751,7 +716,6 @@ int main()
     }
     //We do general cleanup stuff before we close the program.
     heightmap->drop();
-    brush->drop();
 
     device->closeDevice();
     device->drop();
