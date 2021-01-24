@@ -9,9 +9,12 @@ borrowed code and the irrlicht tutorials for the gui stuff*/
 #include <irrlicht.h>
 #include <cmath>
 #include <ctime>
+
 #include "driverChoice.h"
 #include "Terrain.h"
 #include "brushdef.h"
+#include "brush.h"
+#include "utility.h"
 using namespace irr;
 using namespace core;
 using namespace video;
@@ -20,8 +23,12 @@ using namespace io;
 using namespace quake3;
 using namespace gui;
 
+
+list<Brush*> brushes;
+
 IImage* heightmap = 0;
 IImage* brush = 0;
+IImage* Check_pat = 0;
 ITerrainSceneNode* terrain = 0;
 IrrlichtDevice* device = 0;
 IVideoDriver* driver = 0;
@@ -32,9 +39,19 @@ int brushSize = 16;
 path openTerrain("basemap.bmp");
 f32 step = 2;
 int strength = 1;
-IGUICheckBox *paintCheck;
+IGUICheckBox *paintCheck = 0;
+IGUICheckBox *texPaintCheck = 0;
 s32 red=100, green=100, blue=100;
-
+s32 toolbarState = 1;
+Brush *TOOLBAR_1;
+Brush *TOOLBAR_2;
+Brush *TOOLBAR_3;
+Brush *TOOLBAR_4;
+Brush *TOOLBAR_5;
+Brush *TOOLBAR_6;
+Brush *TOOLBAR_7;
+Brush *TOOLBAR_8;
+Brush *TOOLBAR_9;
 brush_t active_brush = BRUSH_RADIAL_GRAD;
 enum
 {
@@ -57,6 +74,16 @@ enum
     GUI_ID_PAINT_RED = 116,
     GUI_ID_PAINT_GREEN = 117,
     GUI_ID_PAINT_BLUE = 118,
+    GUI_ID_BRUSH_TOOLBAR = 119,
+    GUI_ID_TOOLBAR_1 = 120,
+    GUI_ID_TOOLBAR_2 = 121,
+    GUI_ID_TOOLBAR_3 = 122,
+    GUI_ID_TOOLBAR_4 = 123,
+    GUI_ID_TOOLBAR_5 = 124,
+    GUI_ID_TOOLBAR_6 = 125,
+    GUI_ID_TOOLBAR_7 = 126,
+    GUI_ID_TOOLBAR_8 = 127,
+    GUI_ID_TOOLBAR_9 = 128
 };
 void save(IVideoDriver*);
 
@@ -88,7 +115,7 @@ void genWhiteNoise(int bsize)
     //driver->writeImageToFile(tempBrush, "test.png", 0);
 }
 //Generates brushes for use with the editor
-void generateBrush(int radius)
+IImage *generateBrush(int radius)
 {
     IImage* tempBrush = 0;
     tempBrush = driver->createImage(ECF_A8R8G8B8, dimension2d<u32>(radius*2,radius*2));
@@ -110,9 +137,8 @@ void generateBrush(int radius)
         if(color.getBlue() > 0)
         color.setBlue(color.getBlue() - loss);
     }
-    if(brush)
-        brush->drop();
-    brush = tempBrush;
+
+    return (tempBrush);
     //driver->writeImageToFile(tempBrush, "test.png", 0);
 }
 //Loads a terrain although the save function just outputs to basemap.bmp
@@ -290,56 +316,6 @@ class MyEventReceiver : public IEventReceiver
         }
 };
 
-/*==============================================================================
-  Raise or lower terrain (selected vertice)
-==============================================================================*/
-void RaiseTerrainVertex(s32 index, f32 step, bool up)
-{
-    if(active_brush == BRUSH_WHITE_NOISE)
-        genWhiteNoise(brushSize);
-    scene::IMesh* pMesh = terrain->getMesh();
-    if(!up)
-    device->getLogger()->log("NOT UP", ELL_INFORMATION);
-    s32 heightmapWidth = heightmap->getDimension().Width;
-    s32 heightmapHeight = heightmap->getDimension().Height;
-
-    s32 b;
-    for (b=0; b<pMesh->getMeshBufferCount(); ++b){
-        IMeshBuffer* pMeshBuffer = pMesh->getMeshBuffer(b);
-        // skip mesh buffers that are not the right type
-        if (pMeshBuffer->getVertexType() != video::EVT_2TCOORDS) continue;
-
-        S3DVertex2TCoords* pVertices = (S3DVertex2TCoords*)pMeshBuffer->getVertices();
-
-        s32 brushWidth = brush->getDimension().Width;
-        s32 brushHeight = brush->getDimension().Height;
-
-        for(int y = 0; y < brushHeight; y++){
-            for(int x = 0; x < brushWidth; x++){
-                SColor brushPixel = brush->getPixel(x, y);
-
-                if((index-(brushWidth/2)-((brushWidth/2)*heightmapWidth) + (x+(y*heightmapWidth))) >= 0){
-                    f32 hy = pVertices[index-(brushWidth/2)-((brushWidth/2)*heightmapWidth) + (x+(y*heightmapWidth))].Pos.Y;
-                    f32 bp = brushPixel.getRed()/255.0*step;
-                    bp = (up)?bp:-bp;
-                    if(up)
-                    {
-                        if(bp > 0 && hy+bp+strength <= 255)
-                        pVertices[index-(brushWidth/2)-((brushWidth/2)*heightmapWidth) + (x+(y*heightmapWidth))].Pos.Y = hy+bp;
-                    }
-                    if(!up)
-                    {
-                     if(hy+bp+strength >=0 && hy+bp+strength <= 255)
-                        pVertices[index-(brushWidth/2)-((brushWidth/2)*heightmapWidth) + (x+(y*heightmapWidth))].Pos.Y = hy+bp;
-                    }
-                }
-            }
-        }
-    }
-
-    // force terrain render buffer to reload
-    terrain->setPosition(terrain->getPosition());
-}
 
 /*==============================================================================
   Save file
@@ -384,6 +360,9 @@ void buildGUI()
         e->remove();
     }
     IGUIWindow* wnd = env->addWindow(rect<s32>(600,45,800,480),false,L"Toolbox",0,GUI_ID_TOOLBOX_WINDOW);
+
+    wnd->setDraggable(false);
+
     ITexture* icon = driver->getTexture("Radial_Gradient_Icon.png");
     IGUIButton* button = env->addButton(rect<s32>(10,115,45,150),wnd,GUI_ID_BRUSH_RADIAL,0,L"Radial Gradient Brush(Fading Circle");
     button->setImage(icon);
@@ -408,16 +387,14 @@ void buildGUI()
     brushStrength->setMax(50);
     brushStrength->setMin(1);
     brushStrength->setPos(1);
+    IGUIWindow* brushBar = env->addWindow(rect<s32>(0,500,800,600),false,L"Toolbar",0,GUI_ID_BRUSH_TOOLBAR);
+    brushBar->setDrawTitlebar(0);
+    brushBar->setDraggable(false);
+    brushBar->getCloseButton()->remove();
+    env->addButton(rect<s32>(10,10,100,100),brushBar,GUI_ID_TOOLBAR_1,0,L"Slot1");
 }
 MyEventReceiver receiver;
-//Creates our device and gathers the video driver and stuff from it
-void setUpDevice()
-{
-    device = createDevice(EDT_DIRECT3D9, dimension2d<u32>(800, 600), 32, false, true, false, &receiver);
-    driver = device->getVideoDriver();
-    smgr = device->getSceneManager();
-    env = device->getGUIEnvironment();
-}
+
 
 int main()
 {
@@ -450,6 +427,16 @@ int main()
 
     terrain->setPosition(terrain->getPosition());
     IImage *Iter = driver->createImageFromFile("rockwall.jpg");
+    Check_pat = driver->createImageFromFile("natfl190.jpg");
+    generateBrush(32);
+    TOOLBAR_1 = new Brush();
+    TOOLBAR_1->setBrush(driver->createImageFromFile("rock006.jpg"));
+    TOOLBAR_1->setType(BRUSH_TEXTURE);
+    TOOLBAR_2 = new Brush();
+    TOOLBAR_2->setType(BRUSH_PAINT);
+    TOOLBAR_3 = new Brush();
+    TOOLBAR_3->setBrush(generateBrush(32));
+    TOOLBAR_3->setType(BRUSH_TERRAIN);
     ITexture *ter = driver->addTexture("terrain",Iter);
     terrain->setMaterialTexture(0, ter);
     selector = smgr->createTerrainTriangleSelector(terrain, 0);
@@ -511,8 +498,27 @@ int main()
                     //We set our cursor to visible again.
                     device->getCursorControl()->setVisible( !device->getCursorControl()->isVisible() );
                 }
+                if(receiver.IsKeyDown(KEY_KEY_1)){
+                    toolbarState = 1;
+                }else if(receiver.IsKeyDown(KEY_KEY_2)){
+                    toolbarState = 2;
+                }else if(receiver.IsKeyDown(KEY_KEY_3)){
+                    toolbarState = 3;
+                }else if(receiver.IsKeyDown(KEY_KEY_4)){
+                    toolbarState = 4;
+                }else if (receiver.IsKeyDown(KEY_KEY_5)){
+                    toolbarState = 5;
+                }else if(receiver.IsKeyDown(KEY_KEY_6)){
+                    toolbarState = 6;
+                }else if(receiver.IsKeyDown(KEY_KEY_7)){
+                    toolbarState = 7;
+                }else if(receiver.IsKeyDown(KEY_KEY_8)){
+                    toolbarState = 8;
+                }else if(receiver.IsKeyDown(KEY_KEY_9)){
+                    toolbarState = 9;
+                }
                 // move the arrow to the nearest vertex ...
-                //400, 300 si la rÃ©solution utilisÃ©e est 800x600
+                //400, 300 si la résolution utilisée est 800x600
                 const position2di clickPosition = position2di(400, 300);
                 const line3d<float> ray = smgr->getSceneCollisionManager()->getRayFromScreenCoordinates(clickPosition, cam);
                 vector3df pos;
@@ -541,7 +547,147 @@ int main()
                                     if(receiver.IsRMBDown()){
                                         device->getLogger()->log("Right mouse button down", ELL_INFORMATION);
                                     }
-                                if(paintCheck->isChecked())
+                                switch (toolbarState)
+                                {
+                                case 1:
+                                    switch(TOOLBAR_1->getType()){
+
+                                    case BRUSH_TEXTURE:
+                                        TOOLBAR_1->draw(terrain,Iter,ter,brushSize ,x, z, 12, device, driver);
+                                        break;
+                                    case BRUSH_PAINT:
+                                        TOOLBAR_1->draw(terrain, Iter, SColor(255, red, green, blue), ter, x, z, brushSize, device, driver );
+                                        break;
+                                    case BRUSH_TERRAIN:
+                                        TOOLBAR_1->draw(terrain, index, step, receiver.IsLMBDown(), heightmap->getDimension().Width, heightmap->getDimension().Height, brushSize, strength, device);
+                                    default:
+                                        break;
+                                    }
+                                    break;
+                                case 2:
+                                    switch(TOOLBAR_2->getType()){
+                                    case BRUSH_TEXTURE:
+                                        TOOLBAR_2->draw(terrain,Iter,ter,brushSize ,x, z, 12, device, driver);
+                                        break;
+                                    case BRUSH_PAINT:
+                                        TOOLBAR_2->draw(terrain, Iter, SColor(255, red, green, blue), ter, x, z, brushSize, device, driver );
+                                        break;
+                                    case BRUSH_TERRAIN:
+                                        TOOLBAR_2->draw(terrain, index, step, receiver.IsLMBDown(), heightmap->getDimension().Width, heightmap->getDimension().Height, brushSize, strength, device);
+                                        break;
+                                    default:
+                                        break;
+                                    }
+                                    break;
+                                case 3:
+                                     switch(TOOLBAR_3->getType()){
+                                    case BRUSH_TEXTURE:
+                                        TOOLBAR_3->draw(terrain,Iter,ter,brushSize ,x, z, 12, device, driver);
+                                        break;
+                                    case BRUSH_PAINT:
+                                        TOOLBAR_3->draw(terrain, Iter, SColor(255, red, green, blue), ter, x, z, brushSize, device, driver );
+                                        break;
+                                    case BRUSH_TERRAIN:
+                                        TOOLBAR_3->draw(terrain, index, step, receiver.IsLMBDown(), heightmap->getDimension().Width, heightmap->getDimension().Height, brushSize, strength, device);
+                                        break;
+                                    default:
+                                        break;
+                                    }
+                                    break;
+                                case 4:
+                                     switch(TOOLBAR_2->getType()){
+                                    case BRUSH_TEXTURE:
+                                        TOOLBAR_2->draw(terrain,Iter,ter,brushSize ,x, z, 12, device, driver);
+                                        break;
+                                    case BRUSH_PAINT:
+                                        TOOLBAR_2->draw(terrain, Iter, SColor(255, red, green, blue), ter, x, z, brushSize, device, driver );
+                                        break;
+                                    case BRUSH_TERRAIN:
+                                        TOOLBAR_2->draw(terrain, index, step, receiver.IsLMBDown(), heightmap->getDimension().Width, heightmap->getDimension().Height, brushSize, strength, device);
+                                        break;
+                                    default:
+                                        break;
+                                    }
+                                    break;
+                                case 5:
+                                     switch(TOOLBAR_2->getType()){
+                                    case BRUSH_TEXTURE:
+                                        TOOLBAR_2->draw(terrain,Iter,ter,brushSize ,x, z, 12, device, driver);
+                                        break;
+                                    case BRUSH_PAINT:
+                                        TOOLBAR_2->draw(terrain, Iter, SColor(255, red, green, blue), ter, x, z, brushSize, device, driver );
+                                        break;
+                                    case BRUSH_TERRAIN:
+                                        TOOLBAR_2->draw(terrain, index, step, receiver.IsLMBDown(), heightmap->getDimension().Width, heightmap->getDimension().Height, brushSize, strength, device);
+                                        break;
+                                    default:
+                                        break;
+                                    }
+                                    break;
+                                case 6:
+                                     switch(TOOLBAR_2->getType()){
+                                    case BRUSH_TEXTURE:
+                                        TOOLBAR_2->draw(terrain,Iter,ter,brushSize ,x, z, 12, device, driver);
+                                        break;
+                                    case BRUSH_PAINT:
+                                        TOOLBAR_2->draw(terrain, Iter, SColor(255, red, green, blue), ter, x, z, brushSize, device, driver );
+                                        break;
+                                    case BRUSH_TERRAIN:
+                                        TOOLBAR_2->draw(terrain, index, step, receiver.IsLMBDown(), heightmap->getDimension().Width, heightmap->getDimension().Height, brushSize, strength, device);
+                                        break;
+                                    default:
+                                        break;
+                                    }
+                                    break;
+                                case 7:
+                                     switch(TOOLBAR_2->getType()){
+                                    case BRUSH_TEXTURE:
+                                        TOOLBAR_2->draw(terrain,Iter,ter,brushSize ,x, z, 12, device, driver);
+                                        break;
+                                    case BRUSH_PAINT:
+                                        TOOLBAR_2->draw(terrain, Iter, SColor(255, red, green, blue), ter, x, z, brushSize, device, driver );
+                                        break;
+                                    case BRUSH_TERRAIN:
+                                        TOOLBAR_2->draw(terrain, index, step, receiver.IsLMBDown(), heightmap->getDimension().Width, heightmap->getDimension().Height, brushSize, strength, device);
+                                        break;
+                                    default:
+                                        break;
+                                    }
+                                    break;
+                                case 8:
+                                     switch(TOOLBAR_2->getType()){
+                                    case BRUSH_TEXTURE:
+                                        TOOLBAR_2->draw(terrain,Iter,ter,brushSize ,x, z, 12, device, driver);
+                                        break;
+                                    case BRUSH_PAINT:
+                                        TOOLBAR_2->draw(terrain, Iter, SColor(255, red, green, blue), ter, x, z, brushSize, device, driver );
+                                        break;
+                                    case BRUSH_TERRAIN:
+                                        TOOLBAR_2->draw(terrain, index, step, receiver.IsLMBDown(), heightmap->getDimension().Width, heightmap->getDimension().Height, brushSize, strength, device);
+                                        break;
+                                    default:
+                                        break;
+                                    }
+                                    break;
+                                case 9 :
+                                     switch(TOOLBAR_2->getType()){
+                                    case BRUSH_TEXTURE:
+                                        TOOLBAR_2->draw(terrain,Iter,ter,brushSize ,x, z, 12, device, driver);
+                                        break;
+                                    case BRUSH_PAINT:
+                                        TOOLBAR_2->draw(terrain, Iter, SColor(255, red, green, blue), ter, x, z, brushSize, device, driver );
+                                        break;
+                                    case BRUSH_TERRAIN:
+                                        TOOLBAR_2->draw(terrain, index, step, receiver.IsLMBDown(), heightmap->getDimension().Width, heightmap->getDimension().Height, brushSize, strength, device);
+                                        break;
+                                    default:
+                                        break;
+                                    }
+                                    break;
+                                default:
+                                    break;
+                                }
+                               /* if(paintCheck->isChecked())
                                 {
                                     stringw xc = "X:";
                                     xc += 512 - x;
@@ -557,18 +703,15 @@ int main()
                                     {
                                         for(double angle=0; angle <= 2*PI; angle +=0.001)
                                         {
+                                            s32 bx = 512 - x + r*cos(angle);
+                                            s32 bz = z + r*sin(angle);
+                                            //color = Check_pat->getPixel(remainder(bx+60, 128),remainder(bz, 128));
                                             //tempBrush->setPixel(center.X + r*cos(angle), center.Y + r*sin(angle), color, false);
-                                            Iter->setPixel(512 - x + r*cos(angle), z + r*sin(angle), SColor(255,red,green,blue));
+                                            Iter->setPixel(512 - x + r*cos(angle), z + r*sin(angle), color);
                                         }
-                                        if(color.getRed() > 0)
-                                        color.setRed(color.getRed() - loss);
-                                        if(color.getGreen() > 0)
-                                        color.setGreen(color.getGreen() - loss);
-                                        if(color.getBlue() > 0)
-                                        color.setBlue(color.getBlue() - loss);
-                                        color.setAlpha(color.getAlpha() - loss);
+
                                     }
-                                    Iter->setPixel(512 - x, z, SColor(255,red,green,blue));
+                                    //Iter->setPixel(512 - x, z, SColor(255,red,green,blue));
                                     ITexture *old = ter;
                                     // old->drop(); will cause the program to throw an exception.
                                     driver->removeTexture(old);
@@ -578,7 +721,7 @@ int main()
                                 }else{
                                     RaiseTerrainVertex(index, step, receiver.IsLMBDown());
                                     then = now + 100;
-                                }
+                                }*/
 
                             }
                     }
