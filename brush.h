@@ -130,7 +130,9 @@ class Brush
         if(a != 0)
         {
             ibrush_t = a;
+            return true;
         }
+        return false;
     }
     void setType(brush_t a)
     {
